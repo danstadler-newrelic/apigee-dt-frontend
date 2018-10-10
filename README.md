@@ -32,10 +32,19 @@ wget https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/ne
 
 
 **Step 3: download and build the code for the sample project**
+
+option 1) 
+
 - we are downloading the completed code from this page: https://www.journaldev.com/14476/spring-mvc-example
 - in the project root directory, run this:
 wget https://www.journaldev.com/wp-content/uploads/spring/spring-mvc-example.zip
 - unzip the downloaded zip file
+
+option 2) 
+
+- clone this repo (has BSD 2-clause license added): 
+https://github.com/danstadler-newrelic/journaldev-spring-mvc-example
+
 
 
 **Step 4: modify the application to call Apigee:**
