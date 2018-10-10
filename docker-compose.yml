@@ -1,0 +1,10 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - '8080:8080'
+    environment:
+      - TOMCAT_USERNAME=tomcat
+      - TOMCAT_PASSWORD=tomcat
+      - 'JAVA_OPTS=-javaagent:/opt/newrelic/newrelic.jar'
