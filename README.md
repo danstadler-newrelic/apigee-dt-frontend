@@ -6,9 +6,8 @@ These are instructions for setting up a Dockerized Java WAR which
 **test environment**
 - Ubuntu 16
 
-
 **prerequisites**
-- Docker, Docker Compose
+- Docker
 - Java 8 (Oracle)
 - Apache Maven
 
@@ -26,7 +25,7 @@ wget https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/ne
 - and run this:
 wget https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/newrelic.yml
 
-**Step 2: alter newrelic.yml**
+**Step 2: alter your Dockerfile to include New Relic settings**
 - Change license key to your license key, available here: https://rpm.newrelic.com/accounts/[YOUR_RPM_ID]
 - Change application name to something you’d like the app to show up as in New Relic APM
 
@@ -87,22 +86,13 @@ https://github.com/danstadler-newrelic/journaldev-spring-mvc-example
 `<P>The response from the Apigee proxy was ${apigeeResponse}.</p>`
 
 
-
 **Step 6: package the WAR file**
 - in the spring-mvc-example directory, run this: mvn package
 
 
-
-**Step 7: build/start the docker container**
-- in the project root directory, run: docker-compose up
-- wait for download/build process to complete
+**Step 7: build the docker container, launch in K8S**
+- will leave this up to the reader - use your existing processes for building and deploying containers
 - note that in the Dockerfile, we are copying spring-mvc-example.war into Tomcat's webapps directory (at /opt/bitnami/tomcat)
-
-
-**Step 8 (optional): if you need to repackage the WAR file, make sure to rm the docker container and image from the prior run**
-- docker rm [container name]
-- docker image rm [image name]
-
 
 
 
