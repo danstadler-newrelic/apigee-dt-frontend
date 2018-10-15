@@ -91,11 +91,26 @@ https://github.com/danstadler-newrelic/journaldev-spring-mvc-example
 
 
 **Step 7: build the docker container, launch in K8S**
-- will leave this up to the reader - use your existing processes for building and deploying containers
-- note that in the Dockerfile, we are copying spring-mvc-example.war into Tomcat's webapps directory (at /opt/bitnami/tomcat)
+
+- note: depending on what you did in step 3: if you chose option 2 (git clone) then this line is fine in your dockerfile:
+ADD ./journaldev-spring-mvc-example/spring-mvc-example/target/spring-mvc-example.war /opt/bitnami/tomcat/webapps/
+
+- however if you chose option 1 (download zip) - then that line will need to be:
+ADD ./spring-mvc-example/target/spring-mvc-example.war /opt/bitnami/tomcat/webapps/
+
+
+- for building and deploying: will leave this up to the reader - use your existing processes for building and deploying containers
 
 
 
+**Step 8: test**
+- this assumes that you have stood up:
+- the back-end code: https://github.com/danstadler-newrelic/apigee-dt-backend
+- an apigee proxy to the back-end code
+- altered the code in step 4 above, to point to your actual proxy, not to "http://mocktarget.apigee.net/"
 
+- go to your hosted app, like this: [your-front-end-domain]/spring-mvc-example/
+
+you should see a "hello world" message, and a few lines down, you should see a successful response from the back-end.
 
 
