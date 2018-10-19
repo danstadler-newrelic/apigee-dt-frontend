@@ -6,111 +6,94 @@ These are instructions for setting up a Dockerized Java WAR which
 **test environment**
 - Ubuntu 16
 
+
 **prerequisites**
+1) If you want to get as far as building this container and testing it locally, you will need:
 - Docker
 - Java 8 (Oracle)
 - Apache Maven
+
+2) For pushing the container to gcloud: we will follow this example: https://cloud.google.com/kubernetes-engine/docs/tutorials/hello-app
+
 
 **Clone the source code**
 - https://github.com/danstadler-newrelic/apigee-dt-frontend
 
 
-
 **Step 1: download the New Relic agent**
-- cd into the project root directory
-- mkdir newrelic
-- cd newrelic
-- run this:
+- cd into the newrelic directory
+- run this: 
+```
 wget https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/newrelic.jar
-- and run this:
-wget https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/newrelic.yml
-
-**Step 2: alter your Dockerfile to include New Relic settings**
-- Change license key to your license key, available here: https://rpm.newrelic.com/accounts/[YOUR_RPM_ID]
-- Change application name to something you’d like the app to show up as in New Relic APM
+```
+- note that newrelic.yml is already there. Leave the app name and license key fields blank.
 
 
-**Step 3: download and build the code for the sample project**
+**Step 2: set up your environment variables**
+- These can be used both for testing the container locally, as well as for building deploying it to K8S.
+```
+export PROJECT_ID="$(gcloud config get-value project -q)"
+export PROJECT_NAME=apigee-dt-front
+export PROJECT_PORT=8080
+export PROJECT_VERSION=v1
+export NEW_RELIC_APP_NAME=your-APM-app-name-here
+export NEW_RELIC_LICENSE_KEY=your-license-key-here
+export APIGEE_PROXY_URL=your-apigee-proxy-url
+```
 
-option 1) 
-
-- we are downloading the completed code from this page: https://www.journaldev.com/14476/spring-mvc-example
-- in the project root directory, run this:
-wget https://www.journaldev.com/wp-content/uploads/spring/spring-mvc-example.zip
-- unzip the downloaded zip file
-
-option 2) 
-
-- clone this repo (has BSD 2-clause license added): 
-https://github.com/danstadler-newrelic/journaldev-spring-mvc-example
-
-
-
-**Step 4: modify the application to call Apigee:**
-- edit this file: spring-mvc-example/src/main/java/com/journaldev/spring/controller/HomeController.java
-
-1 - add these import statements:
-
-    import java.net.URL;
-    import java.net.HttpURLConnection;
-    import java.io.BufferedReader;
-    import java.io.InputStreamReader;
-
-2 - add this code to the home() function, just before its return statement:
-
-                try {
-                        // change this, or get from an external config value
-                        URL url = new URL("http://mocktarget.apigee.net/");
-                        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                        con.setRequestMethod("GET");
-                        int status = con.getResponseCode();
-                        BufferedReader in = new BufferedReader(
-                        new InputStreamReader(con.getInputStream()));
-                        String inputLine;
-                        StringBuffer content = new StringBuffer();
-                        while ((inputLine = in.readLine()) != null) {
-                            content.append(inputLine);
-                        }
-                        in.close();
-                        String apigeeResponse = content.toString();
-                        System.out.println(apigeeResponse);
-                        model.addAttribute("apigeeResponse", apigeeResponse);
-                } catch (Throwable t) {
-                        System.out.println (t.toString());
-                }
+- NEW_RELIC_APP_NAME: the name you want this app to appear as in New Relic APM
+- NEW_RELIC_LICENSE_KEY: your RPM license key, available here: https://rpm.newrelic.com/accounts/[my-rpm-id]/applications/setup
+- APIGEE_PROXY_URL: the url you set up in Apigee, as a proxy to this example back-end project: https://github.com/danstadler-newrelic/apigee-dt-backend 
 
 
-**Step 5: modify home.jsp to show the result from the call out to Apigee**
-- edit this file: spring-mvc-example/WebContent/WEB-INF/views/home.jsp
-- add this line: 
-`<P>The response from the Apigee proxy was ${apigeeResponse}.</p>`
+**Step 3: package the WAR file**
+- From the project root directory:
+```
+cd journaldev-spring-mvc-example/spring-mvc-example/ ; mvn package ; cd ../..
+```
+
+**Step 4: build and test the container**
+- Based on the gcloud public doc above, you could do the following to build the container:
+```
+docker build \
+--build-arg newrelic_appname=${NEW_RELIC_APP_NAME} \
+--build-arg newrelic_license=${NEW_RELIC_LICENSE_KEY} \
+--build-arg apigee_proxy_url=${APIGEE_PROXY_URL} \
+-t gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${PROJECT_VERSION} .
+```
+
+You can test the container locally, as described in that doc:
+```
+docker run --rm -p ${PROJECT_PORT}:${PROJECT_PORT} gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${PROJECT_VERSION}
+```
 
 
-**Step 6: package the WAR file**
-- in the spring-mvc-example directory, run this: mvn package
+**Step 5: deploy the container to K8S**
+- Again basing this on the above doc. You could do the following:
+```
+docker push gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${PROJECT_VERSION}
+
+kubectl run ${PROJECT_NAME} --image=gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${PROJECT_VERSION} --port ${PROJECT_PORT}
+kubectl get pods
+kubectl expose deployment ${PROJECT_NAME} --type=LoadBalancer --port 80 --target-port ${PROJECT_PORT}
+kubectl get service
+```
+The last command will take some time but will eventually tell you your load balancer's IP address. We'll refer to that as LOAD_BAL.
+
+note: if you rebuild/re-push the container, the kubectl command is slightly different. Use the docker push command on the new container image, and then use this:
+```
+kubectl set image deployment/${PROJECT_NAME} ${PROJECT_NAME}=gcr.io/${PROJECT_ID}/${PROJECT_NAME}:${PROJECT_VERSION}
+```
 
 
-**Step 7: build the docker container, launch in K8S**
-
-- note: depending on what you did in step 3: if you chose option 2 (git clone) then this line is fine in your dockerfile:
-ADD ./journaldev-spring-mvc-example/spring-mvc-example/target/spring-mvc-example.war /opt/bitnami/tomcat/webapps/
-
-- however if you chose option 1 (download zip) - then that line will need to be:
-ADD ./spring-mvc-example/target/spring-mvc-example.war /opt/bitnami/tomcat/webapps/
-
-
-- for building and deploying: will leave this up to the reader - use your existing processes for building and deploying containers
-
-
-
-**Step 8: test**
+**Step 6: test**
 - this assumes that you have stood up:
 - the back-end code: https://github.com/danstadler-newrelic/apigee-dt-backend
 - an apigee proxy to the back-end code
-- altered the code in step 4 above, to point to your actual proxy, not to "http://mocktarget.apigee.net/"
+- exported the correct env var for the proxy, i.e. export APIGEE_PROXY_URL=your-apigee-proxy-url
 
-- go to your hosted app, like this: [your-front-end-domain]/spring-mvc-example/
+- go to your hosted app, like this: http://[LOAD_BAL]/spring-mvc-example/
 
-you should see a "hello world" message, and a few lines down, you should see a successful response from the back-end.
+You should see a "hello world" message, and a few lines down, you should see a successful response from the back-end.
 
 
