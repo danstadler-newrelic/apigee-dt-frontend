@@ -7,7 +7,7 @@
 <title>Home</title>
 </head>
 <body>
-	<h1>Hello world (v3)</h1>
+	<h1>Hello world (v4)</h1>
 
 	<P>The time on the server is ${serverTime}.</p>
         <P>The response from the Apigee proxy was ${apigeeResponse}.</p>
